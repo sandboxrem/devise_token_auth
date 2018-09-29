@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 # see http://www.emilsoman.com/blog/2013/05/18/building-a-tested/
 module DeviseTokenAuth
   class SessionsController < DeviseTokenAuth::ApplicationController
-    before_action :set_user_by_token, :only => [:destroy]
-    after_action :reset_session, :only => [:destroy]
+    before_action :set_user_by_token, only: [:destroy]
+    after_action :reset_session, only: [:destroy]
 
     def new
       render_new_error
@@ -20,19 +22,12 @@ module DeviseTokenAuth
       if @resource && valid_params?(field, q_value) && (!@resource.respond_to?(:active_for_authentication?) || @resource.active_for_authentication?)
         valid_password = @resource.valid_password?(resource_params[:password])
         if (@resource.respond_to?(:valid_for_authentication?) && !@resource.valid_for_authentication? { valid_password }) || !valid_password
-          render_create_error_bad_credentials
-          return
+          return render_create_error_bad_credentials
         end
-        # create client id
-        auth_values = @resource.create_new_auth_token(nil, resource_params[field], field)
-
-        # These instance variables are required when updating the auth headers
-        # at the end of the request, see:
-        #   DeviseTokenAuth::Concerns::SetUserByToken#update_auth_header
-        @token       = auth_values["access-token"]
-        @client_id   = auth_values["client"]
         @provider    = "email"
         @provider_id = @resource.email
+        @client_id, @token = @resource.create_token
+        @resource.save
 
         # REVIEW: Shouldn't this be a "mapping" option, rather than a :user?
         sign_in(:user, @resource, store: false, bypass: false)
@@ -41,7 +36,11 @@ module DeviseTokenAuth
 
         render_create_success
       elsif @resource && !(!@resource.respond_to?(:active_for_authentication?) || @resource.active_for_authentication?)
-        render_create_error_not_confirmed
+        if @resource.respond_to?(:locked_at) && @resource.locked_at
+          render_create_error_account_locked
+        else
+          render_create_error_not_confirmed
+        end
       else
         render_create_error_bad_credentials
       end
@@ -89,16 +88,11 @@ module DeviseTokenAuth
         auth_val.downcase!
       end
 
-      return {
-        key: auth_key,
-        val: auth_val
-      }
+      { key: auth_key, val: auth_val }
     end
 
     def render_new_error
-      render json: {
-        errors: [ I18n.t("devise_token_auth.sessions.not_supported")]
-      }, status: 405
+      render_error(405, I18n.t('devise_token_auth.sessions.not_supported'))
     end
 
     def render_create_success
@@ -108,16 +102,15 @@ module DeviseTokenAuth
     end
 
     def render_create_error_not_confirmed
-      render json: {
-        success: false,
-        errors: [ I18n.t("devise_token_auth.sessions.not_confirmed", email: @resource.email) ]
-      }, status: 401
+      render_error(401, I18n.t('devise_token_auth.sessions.not_confirmed', email: @resource.email))
+    end
+
+    def render_create_error_account_locked
+      render_error(401, I18n.t('devise.mailer.unlock_instructions.account_lock_msg'))
     end
 
     def render_create_error_bad_credentials
-      render json: {
-        errors: [I18n.t("devise_token_auth.sessions.bad_credentials")]
-      }, status: 401
+      render_error(401, I18n.t('devise_token_auth.sessions.bad_credentials'))
     end
 
     def render_destroy_success
@@ -127,9 +120,7 @@ module DeviseTokenAuth
     end
 
     def render_destroy_error
-      render json: {
-        errors: [I18n.t("devise_token_auth.sessions.user_not_found")]
-      }, status: 404
+      render_error(404, I18n.t('devise_token_auth.sessions.user_not_found'))
     end
 
     private
@@ -137,6 +128,5 @@ module DeviseTokenAuth
     def resource_params
       params.permit(*params_for_resource(:sign_in))
     end
-
   end
 end

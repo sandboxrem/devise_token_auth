@@ -1,7 +1,6 @@
-require 'test_helper'
-require 'mocha/test_unit'
-require 'uri'
+# frozen_string_literal: true
 
+require 'test_helper'
 #  was the web request successful?
 #  was the user redirected to the right page?
 #  was the user successfully authenticated?
@@ -58,7 +57,7 @@ class OmniauthTest < ActionDispatch::IntegrationTest
       expiry = controller.auth_params[:expiry].to_i
 
       # the expiry should have been set
-      assert_equal expiry, @resource.tokens[client_id]['expiry']
+      assert_equal expiry, @resource.tokens[client_id]['expiry'] || @resource.tokens[client_id][:expiry]
 
       # the token sent down to the client should now be valid
       assert @resource.valid_token?(token, client_id)
@@ -71,7 +70,10 @@ class OmniauthTest < ActionDispatch::IntegrationTest
     end
 
     test 'sign_in was called' do
-      User.any_instance.expects(:sign_in)
+      DeviseTokenAuth::OmniauthCallbacksController.any_instance\
+        .expects(:sign_in).with(
+          :user, instance_of(User), has_entries(store: false, bypass: false)
+        )
       get_success
     end
 
@@ -324,11 +326,13 @@ class OmniauthTest < ActionDispatch::IntegrationTest
     end
 
     test 'renders expected data' do
-      get '/auth/facebook',
-          params: { auth_origin_url: @redirect_url,
-                    omniauth_window_type: 'newWindow' }
+      silence_omniauth do
+        get '/auth/facebook',
+            params: { auth_origin_url: @redirect_url,
+                      omniauth_window_type: 'newWindow' }
 
-      follow_all_redirects!
+        follow_all_redirects!
+      end
 
       assert_equal 200, response.status
 
@@ -338,8 +342,10 @@ class OmniauthTest < ActionDispatch::IntegrationTest
     end
 
     test 'renders something with no auth_origin_url' do
-      get '/auth/facebook'
-      follow_all_redirects!
+      silence_omniauth do
+        get '/auth/facebook'
+        follow_all_redirects!
+      end
       assert_equal 200, response.status
       assert_select 'body', 'invalid_credentials'
     end

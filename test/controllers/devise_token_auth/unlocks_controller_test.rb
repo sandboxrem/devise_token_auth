@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 
 #  was the web request successful?
@@ -33,7 +35,7 @@ class DeviseTokenAuth::UnlocksControllerTest < ActionController::TestCase
 
     describe 'Unlocking user' do
       before do
-        @resource = lockable_users(:unlocked_user)
+        @resource = create(:lockable_user)
       end
 
       describe 'request unlock without email' do
@@ -138,11 +140,13 @@ class DeviseTokenAuth::UnlocksControllerTest < ActionController::TestCase
               raw_qs = response.location.split('?')[1]
               @qs = Rack::Utils.parse_nested_query(raw_qs)
 
+              @access_token   = @qs['access-token']
+              @client         = @qs['client']
               @client_id      = @qs['client_id']
               @expiry         = @qs['expiry']
-              @unlock         = @qs['unlock']
               @token          = @qs['token']
               @uid            = @qs['uid']
+              @unlock         = @qs['unlock']
             end
 
             test 'respones should have success redirect status' do
@@ -150,15 +154,18 @@ class DeviseTokenAuth::UnlocksControllerTest < ActionController::TestCase
             end
 
             test 'response should contain auth params' do
+              assert @access_token
+              assert @client
               assert @client_id
               assert @expiry
-              assert @unlock
               assert @token
               assert @uid
+              assert @unlock
             end
 
             test 'response auth params should be valid' do
               assert @resource.valid_token?(@token, @client_id)
+              assert @resource.valid_token?(@access_token, @client)
             end
           end
         end

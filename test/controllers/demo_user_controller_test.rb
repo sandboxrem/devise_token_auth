@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 
 #  was the web request successful?
@@ -11,9 +13,7 @@ class DemoUserControllerTest < ActionDispatch::IntegrationTest
   describe DemoUserController do
     describe 'Token access' do
       before do
-        @resource = users(:confirmed_email_user)
-        @resource.skip_confirmation!
-        @resource.save!
+        @resource = create(:user, :confirmed)
 
         @auth_headers = @resource.create_new_auth_token
 
@@ -407,20 +407,117 @@ class DemoUserControllerTest < ActionDispatch::IntegrationTest
           DeviseTokenAuth.headers_names[:'access-token'] = 'access-token'
         end
       end
+
+      describe 'maximum concurrent devices per user' do
+        before do
+          # Set the max_number_of_devices to a lower number
+          #  to expedite tests! (Default is 10)
+          DeviseTokenAuth.max_number_of_devices = 5
+        end
+
+        it 'should limit the maximum number of concurrent devices' do
+          # increment the number of devices until the maximum is exceeded
+          1.upto(DeviseTokenAuth.max_number_of_devices + 1).each do |n|
+
+            assert_equal(
+              [n, DeviseTokenAuth.max_number_of_devices].min,
+              @resource.reload.tokens.length
+            )
+
+            # Add a new device (and token) ahead of the next iteration
+            @resource.create_new_auth_token
+
+          end
+        end
+
+        it 'should drop the oldest token when the maximum number of devices is exceeded' do
+          # create the maximum number of tokens
+          1.upto(DeviseTokenAuth.max_number_of_devices).each do
+            @resource.create_new_auth_token
+          end
+
+          # get the oldest token client_id
+          oldest_client_id, = @resource.reload.tokens.min_by do |cid, v|
+            v[:expiry] || v['expiry']
+          end # => [ 'CLIENT_ID', {token: ...} ]
+
+          # create another token, thereby dropping the oldest token
+          @resource.create_new_auth_token
+
+          assert_not_includes @resource.reload.tokens.keys, oldest_client_id
+        end
+
+        after do
+          DeviseTokenAuth.max_number_of_devices = 10
+        end
+      end
+    end
+
+    describe 'bypass_sign_in' do
+      before do
+        @resource = create(:user)
+
+        @auth_headers = @resource.create_new_auth_token
+
+        @token     = @auth_headers['access-token']
+        @client_id = @auth_headers['client']
+        @expiry    = @auth_headers['expiry']
+      end
+      describe 'is default value (true)' do
+        before do
+          age_token(@resource, @client_id)
+
+          get '/demo/members_only', params: {}, headers: @auth_headers
+
+          @access_token = response.headers['access-token']
+          @response_status = response.status
+        end
+
+        it 'should allow the request through' do
+          assert_equal 200, @response_status
+        end
+
+        it 'should return auth headers' do
+          assert @access_token
+        end
+
+        it 'should set current user' do
+          assert_equal @controller.current_user, @resource
+        end
+      end
+      describe 'is false' do
+        before do
+          DeviseTokenAuth.bypass_sign_in = false
+          age_token(@resource, @client_id)
+
+          get '/demo/members_only', params: {}, headers: @auth_headers
+
+          @access_token = response.headers['access-token']
+          @response_status = response.status
+
+          DeviseTokenAuth.bypass_sign_in = true
+        end
+
+        it 'should not allow the request through' do
+          refute_equal 200, @response_status
+        end
+
+        it 'should not return auth headers from the first request' do
+          assert_nil @access_token
+        end
+      end
     end
 
     describe 'enable_standard_devise_support' do
       before do
-        @resource = users(:confirmed_email_user)
+        @resource = create(:user, :confirmed)
         @auth_headers = @resource.create_new_auth_token
         DeviseTokenAuth.enable_standard_devise_support = true
       end
 
       describe 'Existing Warden authentication' do
         before do
-          @resource = users(:second_confirmed_email_user)
-          @resource.skip_confirmation!
-          @resource.save!
+          @resource = create(:user, :confirmed)
           login_as(@resource, scope: :user)
 
           # no auth headers sent, testing that warden authenticates correctly.
@@ -447,17 +544,6 @@ class DemoUserControllerTest < ActionDispatch::IntegrationTest
             refute_equal @resource, @controller.current_mang
           end
 
-          it 'should increase the number of tokens by a factor of 2 up to 11' do
-            @first_token = @resource.tokens.keys.first
-
-            DeviseTokenAuth.max_number_of_devices = 11
-            (1..10).each do |n|
-              assert_equal [11, 2 * n].min, @resource.reload.tokens.keys.length
-              get '/demo/members_only', params: {}, headers: nil
-            end
-
-            assert_not_includes @resource.reload.tokens.keys, @first_token
-          end
         end
 
         it 'should return success status' do
@@ -483,9 +569,7 @@ class DemoUserControllerTest < ActionDispatch::IntegrationTest
 
       describe 'existing Warden authentication with ignored token data' do
         before do
-          @resource = users(:second_confirmed_email_user)
-          @resource.skip_confirmation!
-          @resource.save!
+          @resource = create(:user, :confirmed)
           login_as(@resource, scope: :user)
 
           get '/demo/members_only',
