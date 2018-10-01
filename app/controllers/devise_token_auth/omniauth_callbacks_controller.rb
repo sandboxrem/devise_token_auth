@@ -156,13 +156,17 @@ module DeviseTokenAuth
     end
 
     def create_auth_params
+      @provider_id      = auth_hash['uid']
+      @provider = auth_hash['provider']
       @auth_params = {
         auth_token:     @token,
         client_id: @client_id,
         uid:       @resource.uid,
+        provider: 'email',
         expiry:    @expiry,
         config:    @config
       }
+      @auth_params.merge!(@resource.build_auth_header(@token, @client_id, @provider_id, @provider))
       @auth_params.merge!(oauth_registration: true) if @oauth_registration
       @auth_params
     end
