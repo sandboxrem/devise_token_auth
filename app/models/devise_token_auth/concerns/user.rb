@@ -117,11 +117,11 @@ module DeviseTokenAuth::Concerns::User
     # how the resources have been configured and accounting for backwards
     # compatibility prior to multiple authentication methods.
     #
-    def find_resource(id, provider)
+    def find_resource(id, provider, auth_hash = {})
       # 1. If a finder method has been registered for this provider, use it!
       #
       finder_method = finder_methods[provider.try(:to_sym)]
-      return finder_method.call(id) if finder_method
+      return finder_method.call(id, auth_hash) if finder_method
 
       # 2. This check is for backwards compatibility. On introducing multiple
       #    oauth methods, the uid header changed to include the provider. Prior

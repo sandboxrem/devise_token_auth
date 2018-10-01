@@ -161,12 +161,11 @@ module DeviseTokenAuth
       @auth_params = {
         auth_token:     @token,
         client_id: @client_id,
-        uid:       @resource.uid,
-        provider: 'email',
         expiry:    @expiry,
         config:    @config
       }
-      @auth_params.merge!(@resource.build_auth_header(@token, @client_id, @provider_id, @provider))
+      hash = @resource.build_auth_header(@token, @client_id, @provider_id, @provider)
+      @auth_params.merge!(hash)
       @auth_params.merge!(oauth_registration: true) if @oauth_registration
       @auth_params
     end
@@ -222,7 +221,8 @@ module DeviseTokenAuth
     def get_resource_from_auth_hash
       @resource = resource_class.find_resource(
         auth_hash['uid'],
-        auth_hash['provider']
+        auth_hash['provider'],
+        auth_hash
       )
 
       if @resource.nil?
