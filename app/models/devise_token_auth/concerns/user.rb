@@ -333,7 +333,7 @@ module DeviseTokenAuth::Concerns::User
 
   def should_remove_tokens_after_password_reset?
     if Rails::VERSION::MAJOR <= 5
-      encrypted_password_changed? &&
+      will_save_change_to_encrypted_password? &&
         DeviseTokenAuth.remove_tokens_after_password_reset
     else
       saved_change_to_encrypted_password? &&

@@ -165,7 +165,7 @@ module DeviseTokenAuth
         config:    @config
       }
       hash = @resource.build_auth_header(@token, @client_id, @provider_id, @provider)
-      @auth_params.merge!(hash)
+      @auth_params.merge!(hash.slice(:provider, :uid))
       @auth_params.merge!(oauth_registration: true) if @oauth_registration
       @auth_params
     end
