@@ -38,7 +38,7 @@ module DeviseTokenAuth::Concerns::SetUserByToken
   # user auth
   def set_user_by_token(mapping = nil)
     # determine target authentication class
-    rc = resource_class(mapping)
+    rc = devise_resource_class(mapping)
 
     # no default user defined
     return unless rc
@@ -121,7 +121,7 @@ module DeviseTokenAuth::Concerns::SetUserByToken
 
     else
       unless @resource.reload.valid?
-        @resource = resource_class.find(@resource.to_param) # errors remain after reload
+        @resource = devise_resource_class.find(@resource.to_param) # errors remain after reload
         # if we left the model in a bad state, something is wrong in our app
         unless @resource.valid?
           raise DeviseTokenAuth::Errors::InvalidModel, "Cannot set auth token in invalid model. Errors: #{@resource.errors.full_messages}"

@@ -95,7 +95,7 @@ module DeviseTokenAuth
       end
     end
 
-    def resource_class(mapping = nil)
+    def devise_resource_class(mapping = nil)
       if omniauth_params['resource_class']
         omniauth_params['resource_class'].constantize
       elsif params['resource_class']
@@ -106,7 +106,7 @@ module DeviseTokenAuth
     end
 
     def resource_name
-      resource_class
+      devise_resource_class
     end
 
     def omniauth_window_type
@@ -219,14 +219,14 @@ module DeviseTokenAuth
     end
 
     def get_resource_from_auth_hash
-      @resource = resource_class.find_resource(
+      @resource = devise_resource_class.find_resource(
         auth_hash['uid'],
         auth_hash['provider'],
         auth_hash
       )
 
       if @resource.nil?
-        @resource          = resource_class.new
+        @resource          = devise_resource_class.new
         @resource.uid      = auth_hash['uid']      if @resource.has_attribute?(:uid)
         @resource.provider = auth_hash['provider'] if @resource.has_attribute?(:provider)
         @oauth_registration = true

@@ -11,12 +11,12 @@ module DeviseTokenAuth
     end
 
     def create
-      field = resource_class.authentication_field_for(resource_params.keys.map(&:to_sym))
+      field = devise_resource_class.authentication_field_for(resource_params.keys.map(&:to_sym))
 
       if field
         q_value = get_case_insensitive_field_from_resource_params(field)
 
-        @resource = resource_class.find_resource(resource_params[field], field)
+        @resource = devise_resource_class.find_resource(resource_params[field], field)
       end
 
       if @resource && valid_params?(field, q_value) && (!@resource.respond_to?(:active_for_authentication?) || @resource.active_for_authentication?)
@@ -75,7 +75,7 @@ module DeviseTokenAuth
       auth_val = nil
 
       # iterate thru allowed auth keys, use first found
-      resource_class.authentication_keys.each do |k|
+      devise_resource_class.authentication_keys.each do |k|
         if resource_params[k]
           auth_val = resource_params[k]
           auth_key = k
@@ -84,7 +84,7 @@ module DeviseTokenAuth
       end
 
       # honor devise configuration for case_insensitive_keys
-      if resource_class.case_insensitive_keys.include?(auth_key)
+      if devise_resource_class.case_insensitive_keys.include?(auth_key)
         auth_val.downcase!
       end
 

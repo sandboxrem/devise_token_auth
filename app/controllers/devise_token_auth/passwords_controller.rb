@@ -21,9 +21,9 @@ module DeviseTokenAuth
 
       @email = get_case_insensitive_field_from_resource_params(:email)
 
-      field = resource_class.authentication_field_for(resource_params.keys.map(&:to_sym))
+      field = devise_resource_class.authentication_field_for(resource_params.keys.map(&:to_sym))
 
-      @resource = resource_class.find_resource(resource_params[field], field) if field
+      @resource = devise_resource_class.find_resource(resource_params[field], field) if field
       @errors = nil
       @error_status = 400
 
@@ -184,7 +184,7 @@ module DeviseTokenAuth
     end
 
     def with_reset_password_token token
-      recoverable = resource_class.with_reset_password_token(token)
+      recoverable = devise_resource_class.with_reset_password_token(token)
 
       recoverable.reset_password_token = token if recoverable && recoverable.reset_password_token.present?
       recoverable
