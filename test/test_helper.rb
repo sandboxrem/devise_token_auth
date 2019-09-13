@@ -67,6 +67,8 @@ class ActionController::TestCase
   end
 end
 
+# Warnings are too verbose, easier to troubleshoot this way.
+$VERBOSE=nil
 # TODO: remove it when support for Rails < 5 has been dropped
 module Rails
   module Controller

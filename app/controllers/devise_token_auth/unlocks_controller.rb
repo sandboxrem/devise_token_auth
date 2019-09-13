@@ -32,7 +32,7 @@ module DeviseTokenAuth
     end
 
     def show
-      @resource = resource_class.unlock_access_by_token(params[:unlock_token])
+      @resource = devise_resource_class.unlock_access_by_token(params[:unlock_token])
 
       if @resource && @resource.id
         client_id, token = @resource.create_token

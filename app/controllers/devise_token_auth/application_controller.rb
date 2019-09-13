@@ -42,7 +42,7 @@ module DeviseTokenAuth
       devise_parameter_sanitizer.instance_values['permitted'][resource]
     end
 
-    def resource_class(m = nil)
+    def devise_resource_class(m = nil)
       if m
         mapping = Devise.mappings[m]
       else
@@ -61,11 +61,11 @@ module DeviseTokenAuth
     end
 
     def recoverable_enabled?
-      resource_class.devise_modules.include?(:recoverable)
+      devise_resource_class.devise_modules.include?(:recoverable)
     end
 
     def confirmable_enabled?
-      resource_class.devise_modules.include?(:confirmable)
+      devise_resource_class.devise_modules.include?(:confirmable)
     end
 
     def render_error(status, message, data = nil)

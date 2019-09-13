@@ -62,7 +62,7 @@ The authentication information should be included by the client in the headers o
 "token-type":   "Bearer",
 "client":       "xxxxx",
 "expiry":       "yyyyy",
-"uid":          "zzzzz"
+"uid":          "zzzzz provider"
 ~~~
 
 The authentication headers (each one is a seperate header) consists of the following params:
@@ -72,6 +72,6 @@ The authentication headers (each one is a seperate header) consists of the follo
 | **`access-token`** | This serves as the user's password for each request. A hashed version of this value is stored in the database for later comparison. This value should be changed on each request. |
 | **`client`** | This enables the use of multiple simultaneous sessions on different clients. (For example, a user may want to be authenticated on both their phone and their laptop at the same time.) |
 | **`expiry`** | The date at which the current session will expire. This can be used by clients to invalidate expired tokens without the need for an API request. |
-| **`uid`** | A unique value that is used to identify the user. This is necessary because searching the DB for users by their access token will make the API susceptible to [timing attacks](https://codahale.com/a-lesson-in-timing-attacks/). |
+| **`uid`** | A unique value that is used to identify the user, concatenated with the provider the identifier is for (e.g. `12345 facebook` or `a@b.com email`). This is necessary because searching the DB for users by their access token will make the API susceptible to [timing attacks](https://codahale.com/a-lesson-in-timing-attacks/). |
 
 The authentication headers required for each request will be available in the response from the previous request. If you are using the [ng-token-auth](https://github.com/lynndylanhurley/ng-token-auth) AngularJS module or the [jToker](https://github.com/lynndylanhurley/j-toker) jQuery plugin, this functionality is already provided.

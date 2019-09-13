@@ -11,14 +11,12 @@ module DeviseTokenAuth
     end
 
     def create
-      # Check
-      field = (resource_params.keys.map(&:to_sym) & resource_class.authentication_keys).first
+      field = devise_resource_class.authentication_field_for(resource_params.keys.map(&:to_sym))
 
-      @resource = nil
       if field
         q_value = get_case_insensitive_field_from_resource_params(field)
 
-        @resource = find_resource(field, q_value)
+        @resource = devise_resource_class.find_resource(resource_params[field], field)
       end
 
       if @resource && valid_params?(field, q_value) && (!@resource.respond_to?(:active_for_authentication?) || @resource.active_for_authentication?)
@@ -26,9 +24,12 @@ module DeviseTokenAuth
         if (@resource.respond_to?(:valid_for_authentication?) && !@resource.valid_for_authentication? { valid_password }) || !valid_password
           return render_create_error_bad_credentials
         end
+        @provider    = "email"
+        @provider_id = @resource.email
         @client_id, @token = @resource.create_token
         @resource.save
 
+        # REVIEW: Shouldn't this be a "mapping" option, rather than a :user?
         sign_in(:user, @resource, store: false, bypass: false)
 
         yield @resource if block_given?
@@ -74,7 +75,7 @@ module DeviseTokenAuth
       auth_val = nil
 
       # iterate thru allowed auth keys, use first found
-      resource_class.authentication_keys.each do |k|
+      devise_resource_class.authentication_keys.each do |k|
         if resource_params[k]
           auth_val = resource_params[k]
           auth_key = k
@@ -83,7 +84,7 @@ module DeviseTokenAuth
       end
 
       # honor devise configuration for case_insensitive_keys
-      if resource_class.case_insensitive_keys.include?(auth_key)
+      if devise_resource_class.case_insensitive_keys.include?(auth_key)
         auth_val.downcase!
       end
 

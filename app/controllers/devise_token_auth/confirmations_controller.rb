@@ -3,7 +3,7 @@
 module DeviseTokenAuth
   class ConfirmationsController < DeviseTokenAuth::ApplicationController
     def show
-      @resource = resource_class.confirm_by_token(params[:confirmation_token])
+      @resource = devise_resource_class.confirm_by_token(params[:confirmation_token])
 
       if @resource && @resource.id
         expiry = nil

@@ -15,6 +15,8 @@ Then run `bundle install`.
 
 [List of oauth2 providers](https://github.com/intridea/omniauth/wiki/List-of-Strategies)
 
+Consider whether you want to allow [single or multiple](#single-vs-multiple-authentication-methods-per-resource) authentication methods per resource.
+
 ## OmniAuth provider settings
 
 In `config/initializers/omniauth.rb`, add the settings for each of your providers.

@@ -20,7 +20,12 @@ module DeviseTokenAuth
       return render_create_error_not_allowed_redirect_url if blacklisted_redirect_url?
 
       @email = get_case_insensitive_field_from_resource_params(:email)
-      @resource = find_resource(:uid, @email)
+
+      field = devise_resource_class.authentication_field_for(resource_params.keys.map(&:to_sym))
+
+      @resource = devise_resource_class.find_resource(resource_params[field], field) if field
+      @errors = nil
+      @error_status = 400
 
       if @resource
         yield @resource if block_given?
@@ -179,7 +184,7 @@ module DeviseTokenAuth
     end
 
     def with_reset_password_token token
-      recoverable = resource_class.with_reset_password_token(token)
+      recoverable = devise_resource_class.with_reset_password_token(token)
 
       recoverable.reset_password_token = token if recoverable && recoverable.reset_password_token.present?
       recoverable

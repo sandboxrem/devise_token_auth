@@ -2,7 +2,9 @@ class DeviseTokenAuthCreate<%= user_class.pluralize.gsub("::","") %> < ActiveRec
   def change
     <% table_name = @user_class.pluralize.gsub("::","").underscore %>
     create_table(:<%= table_name %><%= primary_key_type %>) do |t|
-      ## Required
+      ## Required if using single method authentication per resource. See
+      #  "Single vs Multiple authentication methods per resource" in the README
+      #  for more information.
       t.string :provider, :null => false, :default => "email"
       t.string :uid, :null => false, :default => ""
 

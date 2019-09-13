@@ -36,6 +36,7 @@ module DeviseTokenAuth
         @resource.skip_confirmation!
       end
 
+      # REVIEW: Shouldn't this be 'devise_mapping' instead of :user?
       sign_in(:user, @resource, store: false, bypass: false)
 
       @resource.save!
@@ -94,7 +95,7 @@ module DeviseTokenAuth
       end
     end
 
-    def resource_class(mapping = nil)
+    def devise_resource_class(mapping = nil)
       if omniauth_params['resource_class']
         omniauth_params['resource_class'].constantize
       elsif params['resource_class']
@@ -105,7 +106,7 @@ module DeviseTokenAuth
     end
 
     def resource_name
-      resource_class
+      devise_resource_class
     end
 
     def omniauth_window_type
@@ -155,13 +156,16 @@ module DeviseTokenAuth
     end
 
     def create_auth_params
+      @provider_id      = auth_hash['uid']
+      @provider = auth_hash['provider']
       @auth_params = {
         auth_token:     @token,
         client_id: @client_id,
-        uid:       @resource.uid,
         expiry:    @expiry,
         config:    @config
       }
+      hash = @resource.build_auth_header(@token, @client_id, @provider_id, @provider)
+      @auth_params.merge!(hash.slice(:provider, :uid))
       @auth_params.merge!(oauth_registration: true) if @oauth_registration
       @auth_params
     end
@@ -215,13 +219,16 @@ module DeviseTokenAuth
     end
 
     def get_resource_from_auth_hash
-      # find or create user by provider and provider uid
-      @resource = resource_class.where(
-        uid: auth_hash['uid'],
-        provider: auth_hash['provider']
-      ).first_or_initialize
+      @resource = devise_resource_class.find_resource(
+        auth_hash['uid'],
+        auth_hash['provider'],
+        auth_hash
+      )
 
-      if @resource.new_record?
+      if @resource.nil?
+        @resource          = devise_resource_class.new
+        @resource.uid      = auth_hash['uid']      if @resource.has_attribute?(:uid)
+        @resource.provider = auth_hash['provider'] if @resource.has_attribute?(:provider)
         @oauth_registration = true
         set_random_password
       end

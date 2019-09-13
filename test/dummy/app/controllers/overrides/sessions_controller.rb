@@ -7,7 +7,7 @@ module Overrides
     def create
       @resource = resource_class.find_by(email: resource_params[:email])
 
-      if @resource && valid_params?(:email, resource_params[:email]) && @resource.valid_password?(resource_params[:password]) && @resource.confirmed?
+      if @resource && @resource.valid_password?(resource_params[:password]) && @resource.confirmed?
         @client_id, @token = @resource.create_token
         @resource.save
 
